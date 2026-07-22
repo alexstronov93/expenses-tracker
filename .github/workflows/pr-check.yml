@@ -1,0 +1,64 @@
+name: PR Check
+
+# Runs on every pull request (and can be triggered manually). Verifies the app
+# compiles, unit tests pass, and reports Android Lint findings. This is the gate
+# that keeps master green.
+
+on:
+  pull_request:
+  workflow_dispatch:
+
+# Cancel superseded runs for the same PR to save CI minutes.
+concurrency:
+  group: pr-check-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  verify:
+    name: Compile, test & lint
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Install Android SDK components
+        run: |
+          yes | sdkmanager --licenses >/dev/null 2>&1 || true
+          sdkmanager "platforms;android-35" "build-tools;35.0.0" "platform-tools" >/dev/null 2>&1 || true
+
+      - name: Run unit tests
+        run: ./gradlew testDebugUnitTest --stacktrace
+
+      - name: Build debug APK
+        run: ./gradlew assembleDebug --stacktrace
+
+      # Lint runs but does not block the PR yet; findings are uploaded as a report.
+      # Flip continue-on-error to false once the codebase is lint-clean to enforce it.
+      - name: Android Lint
+        continue-on-error: true
+        run: ./gradlew lintDebug --stacktrace
+
+      - name: Upload lint report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: lint-report
+          path: app/build/reports/lint-results-debug.html
+          if-no-files-found: ignore
+
+      - name: Upload PR debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: pr-debug-apk
+          path: app/build/outputs/apk/debug/app-debug.apk
+          if-no-files-found: ignore
