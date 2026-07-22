@@ -1,0 +1,16 @@
+<resources>
+    <string name="app_name">Expense Tracker</string>
+    <string name="expenses">Expenses</string>
+    <string name="add_expense">Add expense</string>
+    <string name="edit_expense">Edit expense</string>
+    <string name="title">Title</string>
+    <string name="amount">Amount</string>
+    <string name="category">Category</string>
+    <string name="note">Note</string>
+    <string name="save">Save</string>
+    <string name="delete">Delete</string>
+    <string name="cancel">Cancel</string>
+    <string name="back">Back</string>
+    <string name="total_spent">Total spent</string>
+    <string name="no_expenses">No expenses yet.\nTap + to add your first one.</string>
+</resources>

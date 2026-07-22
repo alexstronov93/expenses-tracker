@@ -1,0 +1,16 @@
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- A simple wallet / money glyph centered in the safe zone. -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M34,42h40a4,4 0,0 1,4 4v16a4,4 0,0 1,-4 4H34a4,4 0,0 1,-4 -4V46a4,4 0,0 1,4 -4z" />
+    <path
+        android:fillColor="#A5D6A7"
+        android:pathData="M66,50h14v8h-14a4,4 0,0 1,0 -8z" />
+    <path
+        android:fillColor="#1B5E20"
+        android:pathData="M70,52a2,2 0,1 0,0.01 0z" />
+</vector>
