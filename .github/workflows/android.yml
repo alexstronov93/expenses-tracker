@@ -4,6 +4,10 @@ on:
   push:
     branches: [ "master", "main" ]
   pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write   # needed to publish the APK to a Release
 
 jobs:
   build:
@@ -22,8 +26,40 @@ jobs:
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
+      - name: Install Android SDK components
+        run: |
+          yes | sdkmanager --licenses >/dev/null 2>&1 || true
+          sdkmanager "platforms;android-35" "build-tools;35.0.0" "platform-tools" >/dev/null 2>&1 || true
+
       - name: Run unit tests
         run: ./gradlew test --stacktrace
 
-      - name: Assemble debug APK
+      - name: Build debug APK
         run: ./gradlew assembleDebug --stacktrace
+
+      - name: Rename APK
+        run: |
+          mkdir -p artifacts
+          cp app/build/outputs/apk/debug/app-debug.apk artifacts/ExpenseTracker-debug.apk
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: ExpenseTracker-debug-apk
+          path: artifacts/ExpenseTracker-debug.apk
+
+      # Publish a stable "latest" pre-release with the APK attached, so there is
+      # always a direct download link you can open on your phone.
+      - name: Publish APK to 'latest' release
+        if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete latest --yes --cleanup-tag 2>/dev/null || true
+          gh release create latest artifacts/ExpenseTracker-debug.apk \
+            --title "Latest debug build" \
+            --notes "Auto-built from ${{ github.sha }}.
+
+          **To install on Android:** download the .apk below, then tap it. If prompted, allow *Install unknown apps* for your browser/Files app. This is a debug build for personal testing." \
+            --prerelease \
+            --target "${{ github.sha }}"
