@@ -1,16 +1,23 @@
-name: Android CI
+name: Release APK
+
+# Builds the app and refreshes the rolling "latest" pre-release whenever master
+# changes, so there is always a fresh, installable APK download link.
 
 on:
   push:
     branches: [ "master", "main" ]
-  pull_request:
   workflow_dispatch:
 
 permissions:
   contents: write   # needed to publish the APK to a Release
 
+concurrency:
+  group: release-apk
+  cancel-in-progress: true
+
 jobs:
-  build:
+  release:
+    name: Build & publish APK
     runs-on: ubuntu-latest
 
     steps:
@@ -32,26 +39,17 @@ jobs:
           sdkmanager "platforms;android-35" "build-tools;35.0.0" "platform-tools" >/dev/null 2>&1 || true
 
       - name: Run unit tests
-        run: ./gradlew test --stacktrace
+        run: ./gradlew testDebugUnitTest --stacktrace
 
       - name: Build debug APK
         run: ./gradlew assembleDebug --stacktrace
 
-      - name: Rename APK
+      - name: Stage APK
         run: |
           mkdir -p artifacts
           cp app/build/outputs/apk/debug/app-debug.apk artifacts/ExpenseTracker-debug.apk
 
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ExpenseTracker-debug-apk
-          path: artifacts/ExpenseTracker-debug.apk
-
-      # Publish a stable "latest" pre-release with the APK attached, so there is
-      # always a direct download link you can open on your phone.
       - name: Publish APK to 'latest' release
-        if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request'
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
