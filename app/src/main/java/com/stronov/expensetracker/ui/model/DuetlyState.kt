@@ -137,13 +137,13 @@ class DuetlyViewModel : ViewModel() {
         }
     }
 
-    fun setDemoState(state: DemoState) {
+    fun selectDemoState(state: DemoState) {
         demoState = state
         if (state != DemoState.DEFAULT) billsScopedToImminent = false
         if (state == DemoState.DEFAULT) bills = InitialBills
     }
 
-    fun setDarkOverride(value: Boolean?) {
+    fun selectDarkOverride(value: Boolean?) {
         darkOverride = value
     }
 

@@ -233,21 +233,21 @@ private fun SettingsScreen(vm: DuetlyViewModel) {
         Text("PROTOTYPE STATE", style = DuetlyType.sectionLabel, color = c.textSecondary)
         Spacer(Modifier.height(10.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ChoiceChip("Default", vm.demoState == DemoState.DEFAULT) { vm.setDemoState(DemoState.DEFAULT) }
-            ChoiceChip("No bills due", vm.demoState == DemoState.NO_BILLS_DUE) { vm.setDemoState(DemoState.NO_BILLS_DUE) }
+            ChoiceChip("Default", vm.demoState == DemoState.DEFAULT) { vm.selectDemoState(DemoState.DEFAULT) }
+            ChoiceChip("No bills due", vm.demoState == DemoState.NO_BILLS_DUE) { vm.selectDemoState(DemoState.NO_BILLS_DUE) }
         }
         Spacer(Modifier.height(8.dp))
         ChoiceChip("Partner not joined", vm.demoState == DemoState.PARTNER_NOT_JOINED) {
-            vm.setDemoState(DemoState.PARTNER_NOT_JOINED)
+            vm.selectDemoState(DemoState.PARTNER_NOT_JOINED)
         }
 
         Spacer(Modifier.height(28.dp))
         Text("THEME", style = DuetlyType.sectionLabel, color = c.textSecondary)
         Spacer(Modifier.height(10.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            ChoiceChip("System", vm.darkOverride == null) { vm.setDarkOverride(null) }
-            ChoiceChip("Light", vm.darkOverride == false) { vm.setDarkOverride(false) }
-            ChoiceChip("Dark", vm.darkOverride == true) { vm.setDarkOverride(true) }
+            ChoiceChip("System", vm.darkOverride == null) { vm.selectDarkOverride(null) }
+            ChoiceChip("Light", vm.darkOverride == false) { vm.selectDarkOverride(false) }
+            ChoiceChip("Dark", vm.darkOverride == true) { vm.selectDarkOverride(true) }
         }
     }
 }
