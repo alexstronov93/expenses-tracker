@@ -37,14 +37,23 @@ fun DuetlyTheme(
     val target = if (darkTheme) DarkDuetlyColors else LightDuetlyColors
 
     // Cross-fade the palette so the theme switch reads as calm, not abrupt.
-    fun anim(c: Color) = animateColorAsState(c, tween(DuetlyMotion.BASE), label = "color").value
+    // Each call has to sit directly in the composable body — a local helper
+    // function cannot invoke @Composable APIs.
+    val spec = tween<Color>(DuetlyMotion.BASE)
+    val appBg by animateColorAsState(target.appBg, spec, label = "appBg")
+    val surface by animateColorAsState(target.surface, spec, label = "surface")
+    val sunken by animateColorAsState(target.sunken, spec, label = "sunken")
+    val textPrimary by animateColorAsState(target.textPrimary, spec, label = "textPrimary")
+    val textSecondary by animateColorAsState(target.textSecondary, spec, label = "textSecondary")
+    val border by animateColorAsState(target.border, spec, label = "border")
+
     val duetly = target.copy(
-        appBg = anim(target.appBg),
-        surface = anim(target.surface),
-        sunken = anim(target.sunken),
-        textPrimary = anim(target.textPrimary),
-        textSecondary = anim(target.textSecondary),
-        border = anim(target.border),
+        appBg = appBg,
+        surface = surface,
+        sunken = sunken,
+        textPrimary = textPrimary,
+        textSecondary = textSecondary,
+        border = border,
     )
 
     val material = if (darkTheme) {
