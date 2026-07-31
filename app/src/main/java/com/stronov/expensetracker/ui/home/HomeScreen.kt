@@ -9,14 +9,11 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.navigationBarsPadding
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBarsPadding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -25,12 +22,9 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.outlined.Description
-import androidx.compose.material.icons.outlined.Home
-import androidx.compose.material.icons.outlined.PieChart
-import androidx.compose.material.icons.outlined.Settings
-import androidx.compose.material.icons.outlined.Timeline
+import androidx.compose.material.icons.outlined.AccountBalanceWallet
+import androidx.compose.material.icons.outlined.Lock
+import androidx.compose.material.icons.outlined.ReceiptLong
 import androidx.compose.material.icons.outlined.WarningAmber
 import androidx.compose.material.icons.rounded.ChevronRight
 import androidx.compose.material3.Icon
@@ -43,130 +37,195 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.stronov.expensetracker.ui.components.DuetlyCard
+import com.stronov.expensetracker.ui.components.IconTile
+import com.stronov.expensetracker.ui.components.PageMargin
+import com.stronov.expensetracker.ui.components.RowDivider
+import com.stronov.expensetracker.ui.components.SectionLabel
+import com.stronov.expensetracker.ui.components.SegmentedBar
+import com.stronov.expensetracker.ui.components.SemiGauge
+import com.stronov.expensetracker.ui.model.Account
+import com.stronov.expensetracker.ui.model.AccountId
+import com.stronov.expensetracker.ui.model.Bill
+import com.stronov.expensetracker.ui.model.Category
+import com.stronov.expensetracker.ui.model.DemoState
+import com.stronov.expensetracker.ui.model.DuetlyViewModel
 import com.stronov.expensetracker.ui.theme.Duetly
 import com.stronov.expensetracker.ui.theme.DuetlyType
 import com.stronov.expensetracker.util.Money
 
-private val PagePad = 20.dp
-
 @Composable
-fun HomeScreen(state: HomeState = SampleHome) {
-    val c = Duetly.colors
-    Box(modifier = Modifier.fillMaxSize().background(c.appBg)) {
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .verticalScroll(rememberScrollState())
-                .padding(bottom = 96.dp),
-        ) {
-            Spacer(Modifier.statusBarsPadding())
-            Header(state)
-            Spacer(Modifier.height(16.dp))
-            if (state.billsDueCount > 0) {
-                AlertCard(state)
-                Spacer(Modifier.height(20.dp))
-            }
-            GaugeBlock(state)
-            Spacer(Modifier.height(24.dp))
-            StatRow(state)
-            Spacer(Modifier.height(28.dp))
-            AccountsSection(state)
-            Spacer(Modifier.height(28.dp))
-            CategoriesSection(state)
+fun HomeScreen(
+    vm: DuetlyViewModel,
+    onOpenBills: () -> Unit,
+    onOpenBudget: () -> Unit,
+    onOpenMoneySource: () -> Unit,
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxWidth()
+            .verticalScroll(rememberScrollState())
+            .padding(bottom = 24.dp),
+    ) {
+        Header(vm)
+        Spacer(Modifier.height(14.dp))
+
+        if (vm.demoState == DemoState.PARTNER_NOT_JOINED) {
+            PartnerInviteCard()
+            Spacer(Modifier.height(14.dp))
         }
 
-        BottomNav(modifier = Modifier.align(Alignment.BottomCenter))
-        Fab(
-            modifier = Modifier
-                .align(Alignment.BottomEnd)
-                .navigationBarsPadding()
-                .padding(end = PagePad, bottom = 72.dp),
-        )
+        val imminent = vm.imminentBills
+        if (imminent.isNotEmpty()) {
+            DueBillsAlert(
+                count = imminent.size,
+                names = imminent.joinToString(", ") { it.name },
+                days = (imminent.minOf { it.dueDay } - vm.today).coerceAtLeast(0),
+                onClick = onOpenBills,
+            )
+            Spacer(Modifier.height(20.dp))
+        }
+
+        GaugeBlock(vm, onOpenMoneySource)
+        Spacer(Modifier.height(22.dp))
+        StatRow(vm)
+        Spacer(Modifier.height(28.dp))
+
+        SectionLabel("Accounts", action = "See all", onActionClick = onOpenBudget)
+        Spacer(Modifier.height(12.dp))
+        LazyRow(
+            contentPadding = PaddingValues(horizontal = PageMargin),
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            items(vm.accounts) { account -> AccountCard(vm, account) }
+        }
+        Spacer(Modifier.height(28.dp))
+
+        SectionLabel("Categories")
+        Spacer(Modifier.height(12.dp))
+        SubHeading("Discretionary")
+        Spacer(Modifier.height(8.dp))
+        DuetlyCard(Modifier.padding(horizontal = PageMargin)) {
+            vm.discretionary.forEachIndexed { i, cat ->
+                if (i > 0) RowDivider()
+                CategoryRow(cat)
+            }
+        }
+
+        Spacer(Modifier.height(20.dp))
+        SubHeading("Fixed")
+        Spacer(Modifier.height(8.dp))
+        // Home shows bill status only — marking paid belongs to the Bills tab.
+        DuetlyCard(Modifier.padding(horizontal = PageMargin)) {
+            vm.visibleBills.forEachIndexed { i, bill ->
+                if (i > 0) RowDivider()
+                FixedRow(bill, onClick = onOpenBills)
+            }
+        }
     }
 }
 
-/* ----------------------------- Header ----------------------------- */
+/* ------------------------------- Header ------------------------------- */
 
 @Composable
-private fun Header(state: HomeState) {
+private fun Header(vm: DuetlyViewModel) {
     val c = Duetly.colors
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = PagePad, vertical = 8.dp),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = PageMargin, vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
-            Text(state.monthLabel, style = DuetlyType.h1, color = c.textPrimary)
-            Spacer(Modifier.height(2.dp))
-            Text("${state.daysLeft} days left", style = DuetlyType.small, color = c.textSecondary)
+            Text(vm.monthLabel, style = DuetlyType.screenTitle, color = c.textPrimary)
+            Text("${vm.daysLeft} days left", style = DuetlyType.small, color = c.textSecondary)
         }
-        Avatars(state)
+        Avatars(partnerJoined = vm.demoState != DemoState.PARTNER_NOT_JOINED)
     }
 }
 
 @Composable
-private fun Avatars(state: HomeState) {
+private fun Avatars(partnerJoined: Boolean) {
     val c = Duetly.colors
     Row {
-        state.partners.forEachIndexed { i, p ->
-            val bg = if (p.isA) c.partnerA else c.partnerB
-            Box(
-                modifier = Modifier
-                    .offset(x = if (i == 0) 0.dp else (-10).dp)
-                    .size(36.dp)
-                    .border(2.dp, c.appBg, CircleShape)
-                    .clip(CircleShape)
-                    .background(bg),
-                contentAlignment = Alignment.Center,
-            ) {
-                Text(p.initial, style = DuetlyType.bodyStrong, color = Color.White)
+        Avatar("O", c.partnerA)
+        Box(Modifier.offset(x = (-10).dp)) {
+            if (partnerJoined) {
+                Avatar("A", c.partnerB)
+            } else {
+                Box(
+                    modifier = Modifier.size(34.dp).clip(CircleShape)
+                        .background(c.sunken).border(1.dp, c.borderStrong, CircleShape),
+                    contentAlignment = Alignment.Center,
+                ) { Text("?", style = DuetlyType.bodyStrong, color = c.textSecondary) }
             }
         }
     }
 }
 
-/* --------------------------- Alert card --------------------------- */
+@Composable
+private fun Avatar(initial: String, bg: Color) {
+    Box(
+        modifier = Modifier.size(34.dp).clip(CircleShape).background(bg),
+        contentAlignment = Alignment.Center,
+    ) { Text(initial, style = DuetlyType.bodyStrong, color = Color.White) }
+}
+
+/* ---------------------------- Alert / invite --------------------------- */
 
 @Composable
-private fun AlertCard(state: HomeState) {
+private fun DueBillsAlert(count: Int, names: String, days: Int, onClick: () -> Unit) {
     val c = Duetly.colors
+    val shape = RoundedCornerShape(12.dp)
     Row(
         modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = PagePad)
-            .clip(RoundedCornerShape(16.dp))
-            .background(c.warningSoft)
-            .clickable { }
+            .fillMaxWidth().padding(horizontal = PageMargin)
+            .clip(shape).background(c.warningSoft).clickable(onClick = onClick)
             .padding(14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Box(
-            modifier = Modifier.size(40.dp).clip(RoundedCornerShape(12.dp))
-                .background(c.warning.copy(alpha = 0.18f)),
+            modifier = Modifier.size(38.dp).clip(RoundedCornerShape(10.dp)).background(c.warningTile),
             contentAlignment = Alignment.Center,
-        ) {
-            Icon(Icons.Outlined.WarningAmber, null, tint = c.warning, modifier = Modifier.size(22.dp))
-        }
+        ) { Icon(Icons.Outlined.WarningAmber, null, tint = c.warningInk, modifier = Modifier.size(20.dp)) }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             Text(
-                "${state.billsDueCount} bills due in ${state.billsDueInDays} days",
-                style = DuetlyType.bodyStrong, color = c.textPrimary,
+                "$count bills due in $days ${if (days == 1) "day" else "days"}",
+                style = DuetlyType.titleMd, color = c.textPrimary,
             )
-            Text(state.billsDueNames, style = DuetlyType.small, color = c.warning)
+            Text(names, style = DuetlyType.small, color = c.warningInk)
         }
         Icon(Icons.Rounded.ChevronRight, null, tint = c.textSecondary)
     }
 }
 
-/* ----------------------------- Gauge ------------------------------ */
+@Composable
+private fun PartnerInviteCard() {
+    val c = Duetly.colors
+    DuetlyCard(Modifier.padding(horizontal = PageMargin)) {
+        Column(Modifier.padding(16.dp)) {
+            Text("Waiting for Alex to join", style = DuetlyType.titleMd, color = c.textPrimary)
+            Spacer(Modifier.height(2.dp))
+            Text("You're seeing your own money only.", style = DuetlyType.small, color = c.textSecondary)
+            Spacer(Modifier.height(14.dp))
+            Box(
+                modifier = Modifier.clip(RoundedCornerShape(10.dp)).background(c.actionPrimary)
+                    .clickable { }.padding(horizontal = 16.dp, vertical = 10.dp),
+            ) { Text("Send invite", style = DuetlyType.bodyStrong, color = c.onActionPrimary) }
+        }
+    }
+}
+
+/* ------------------------------- Gauge -------------------------------- */
 
 @Composable
-private fun GaugeBlock(state: HomeState) {
+private fun GaugeBlock(vm: DuetlyViewModel, onClick: () -> Unit) {
     val c = Duetly.colors
-    val fraction = state.safeToSpendCents.toFloat() / state.budgetCents.toFloat()
-    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+    Box(
+        Modifier.fillMaxWidth().clickable(onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
         SemiGauge(
-            fraction = fraction,
+            fraction = vm.safeToSpendCents.toFloat() / vm.plannedCents.toFloat(),
             trackColor = c.gaugeTrack,
             fillColor = c.gaugeFill,
             thumbColor = c.gaugeThumb,
@@ -174,25 +233,25 @@ private fun GaugeBlock(state: HomeState) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Text("Safe to spend", style = DuetlyType.small, color = c.textSecondary)
                 Spacer(Modifier.height(2.dp))
-                Text(Money.formatPln(state.safeToSpendCents), style = DuetlyType.amountXl, color = c.positive)
+                Text(Money.formatPln(vm.safeToSpendCents), style = DuetlyType.amountHero, color = c.gaugeFill)
                 Spacer(Modifier.height(2.dp))
-                Text("of ${Money.formatPln(state.budgetCents)}", style = DuetlyType.small, color = c.textSecondary)
+                Text("of ${Money.formatPln(vm.plannedCents)}", style = DuetlyType.small, color = c.textSecondary)
             }
         }
     }
 }
 
-/* --------------------------- Stat tiles --------------------------- */
+/* ----------------------------- Stat tiles ------------------------------ */
 
 @Composable
-private fun StatRow(state: HomeState) {
+private fun StatRow(vm: DuetlyViewModel) {
     Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = PagePad),
+        modifier = Modifier.fillMaxWidth().padding(horizontal = PageMargin),
         horizontalArrangement = Arrangement.SpaceEvenly,
     ) {
-        StatTile(StatSpentIcon, "Spent", state.spentCents)
-        StatTile(StatHeldIcon, "Held", state.heldCents)
-        StatTile(StatFreeIcon, "Free", state.freeCents)
+        StatTile(Icons.Outlined.ReceiptLong, "Spent", vm.spentCents)
+        StatTile(Icons.Outlined.Lock, "Held", vm.heldCents)
+        StatTile(Icons.Outlined.AccountBalanceWallet, "Free", vm.safeToSpendCents)
     }
 }
 
@@ -201,142 +260,122 @@ private fun StatTile(icon: ImageVector, label: String, cents: Long) {
     val c = Duetly.colors
     Column(horizontalAlignment = Alignment.CenterHorizontally) {
         Box(
-            modifier = Modifier.size(44.dp).clip(CircleShape).background(c.sunken),
+            modifier = Modifier.size(42.dp).clip(CircleShape).background(c.sunken),
             contentAlignment = Alignment.Center,
-        ) {
-            Icon(icon, null, tint = c.textPrimary, modifier = Modifier.size(20.dp))
-        }
+        ) { Icon(icon, null, tint = c.textPrimary, modifier = Modifier.size(19.dp)) }
         Spacer(Modifier.height(8.dp))
         Text(label, style = DuetlyType.small, color = c.textSecondary)
         Spacer(Modifier.height(2.dp))
-        Text(Money.formatPln(cents), style = DuetlyType.amountMd, color = c.textPrimary)
+        Text(Money.formatPln(cents), style = DuetlyType.amountLg, color = c.textPrimary)
     }
 }
 
-/* --------------------------- Accounts ----------------------------- */
+/* ------------------------------ Accounts ------------------------------- */
 
 @Composable
-private fun AccountsSection(state: HomeState) {
-    SectionHeader("ACCOUNTS", trailing = "See all")
-    Spacer(Modifier.height(12.dp))
-    LazyRow(
-        contentPadding = PaddingValues(horizontal = PagePad),
-        horizontalArrangement = Arrangement.spacedBy(12.dp),
-    ) {
-        items(state.accounts) { acc -> AccountCardView(acc) }
-    }
-}
-
-@Composable
-private fun AccountCardView(acc: AccountCard) {
+private fun AccountCard(vm: DuetlyViewModel, account: Account) {
     val c = Duetly.colors
-    val amountColor = if (acc.isShared) c.partnerB else c.positive
+    val spent = vm.accountSpent(account.id)
+    val held = vm.accountHeld(account.id)
+    val available = vm.accountAvailable(account.id)
+    // Shared money reads as "ours" — the one place a partner colour carries data.
+    val amountColor = if (account.id == AccountId.SHARED) c.partnerB else c.gaugeFill
+
     Column(
         modifier = Modifier
-            .width(300.dp)
-            .clip(RoundedCornerShape(20.dp))
+            .width(272.dp)
+            .clip(RoundedCornerShape(12.dp))
             .background(c.surface)
-            .border(1.dp, c.border, RoundedCornerShape(20.dp))
-            .padding(18.dp),
+            .border(1.dp, c.border, RoundedCornerShape(12.dp))
+            .padding(16.dp),
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(acc.name, style = DuetlyType.titleMd, color = c.textPrimary, modifier = Modifier.weight(1f))
-            Text("•• ${acc.maskedTail}", style = DuetlyType.small, color = c.textSecondary)
+            Text(
+                account.name, style = DuetlyType.titleMd, color = c.textPrimary,
+                modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis,
+            )
+            Text("•• ${account.maskedTail}", style = DuetlyType.caption, color = c.textSecondary)
         }
-        Spacer(Modifier.height(14.dp))
+        Spacer(Modifier.height(12.dp))
         Text("Available", style = DuetlyType.small, color = c.textSecondary)
-        Text(Money.formatPln(acc.availableCents), style = DuetlyType.amountLg, color = amountColor)
-        Spacer(Modifier.height(14.dp))
-        SegmentedBar(
-            segments = listOf(
-                acc.spentCents.toFloat() to c.gaugeTrack,
-                acc.heldCents.toFloat() to c.gaugeThumb,
-                acc.availableCents.toFloat() to c.positive,
-            ),
-        )
-        Spacer(Modifier.height(10.dp))
-        Text(
-            "Planned ${Money.formatPln(acc.plannedCents)} · Spent ${Money.formatPln(acc.spentCents)} · Held ${Money.formatPln(acc.heldCents)}",
-            style = DuetlyType.small, color = c.textFaint, maxLines = 1, overflow = TextOverflow.Ellipsis,
-        )
-    }
-}
-
-/* -------------------------- Categories ---------------------------- */
-
-@Composable
-private fun CategoriesSection(state: HomeState) {
-    val c = Duetly.colors
-    SectionHeader("CATEGORIES")
-    Spacer(Modifier.height(10.dp))
-    Text("Discretionary", style = DuetlyType.bodyStrong, color = c.textPrimary, modifier = Modifier.padding(horizontal = PagePad))
-    Spacer(Modifier.height(10.dp))
-    CardContainer {
-        state.discretionary.forEachIndexed { i, cat ->
-            if (i > 0) RowDivider()
-            CategoryRow(cat)
-        }
-    }
-    Spacer(Modifier.height(20.dp))
-    Text("Fixed", style = DuetlyType.bodyStrong, color = c.textPrimary, modifier = Modifier.padding(horizontal = PagePad))
-    Spacer(Modifier.height(10.dp))
-    CardContainer {
-        state.fixed.forEachIndexed { i, bill ->
-            if (i > 0) RowDivider()
-            BillRow(bill)
-        }
-    }
-}
-
-@Composable
-private fun CategoryRow(cat: CategorySpend) {
-    val c = Duetly.colors
-    val leftFrac = cat.leftCents.toFloat() / cat.budgetCents.toFloat()
-    val low = leftFrac < 0.1f
-    val leftColor = if (low) c.warning else c.positive
-    val remainingColor = if (low) c.warning else c.positive
-    val spent = (cat.budgetCents - cat.leftCents).coerceAtLeast(0)
-
-    Column(Modifier.padding(horizontal = 16.dp, vertical = 14.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            IconTile(cat.icon)
-            Spacer(Modifier.width(12.dp))
-            Text(cat.name, style = DuetlyType.body, color = c.textPrimary, modifier = Modifier.weight(1f))
-            Row {
-                Text(Money.formatPln(cat.leftCents) + " left", style = DuetlyType.bodyStrong, color = leftColor)
-                Text(" of " + Money.formatPln(cat.budgetCents), style = DuetlyType.body, color = c.textSecondary)
-            }
-        }
+        Text(Money.formatPln(available), style = DuetlyType.amountHero, color = amountColor)
         Spacer(Modifier.height(12.dp))
         SegmentedBar(
             segments = listOf(
-                spent.toFloat() to c.gaugeTrack,
-                cat.leftCents.toFloat() to remainingColor,
+                spent to c.segmentSpent,
+                held to c.segmentHeld,
+                available to c.gaugeFill,
             ),
+            height = 6.dp,
+        )
+        Spacer(Modifier.height(10.dp))
+        Text(
+            "Planned ${Money.formatPln(account.plannedCents)} · Spent ${Money.formatPln(spent)} · Held ${Money.formatPln(held)}",
+            style = DuetlyType.caption, color = c.textSecondary,
+            maxLines = 1, overflow = TextOverflow.Ellipsis,
         )
     }
 }
 
+/* ------------------------------ Categories ----------------------------- */
+
 @Composable
-private fun BillRow(bill: Bill) {
+private fun SubHeading(text: String) {
+    val c = Duetly.colors
+    Text(
+        text, style = DuetlyType.bodyStrong, color = c.textPrimary,
+        modifier = Modifier.padding(horizontal = PageMargin),
+    )
+}
+
+@Composable
+private fun CategoryRow(cat: Category) {
+    val c = Duetly.colors
+    val left = (cat.limitCents - cat.spentCents).coerceAtLeast(0)
+    val nearlyOut = left.toFloat() / cat.limitCents.toFloat() < 0.1f
+    Column(Modifier.padding(horizontal = 16.dp, vertical = 12.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            IconTile(cat.iconKey)
+            Spacer(Modifier.width(12.dp))
+            Text(cat.name, style = DuetlyType.body, color = c.textPrimary, modifier = Modifier.weight(1f))
+            Text(
+                Money.formatPln(left) + " left",
+                style = DuetlyType.amountSm,
+                color = if (nearlyOut) c.warning else c.gaugeFill,
+            )
+            Text(" of ${Money.formatPln(cat.limitCents)}", style = DuetlyType.small, color = c.textSecondary)
+        }
+        Spacer(Modifier.height(10.dp))
+        SegmentedBar(
+            segments = listOf(
+                cat.spentCents to c.segmentSpent,
+                left to if (nearlyOut) c.warning else c.gaugeFill,
+            ),
+            height = 6.dp,
+        )
+    }
+}
+
+/** Fixed (bill) row on Home: status pill + amount, tapping goes to Bills. */
+@Composable
+private fun FixedRow(bill: Bill, onClick: () -> Unit) {
     val c = Duetly.colors
     Row(
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 14.dp),
+        modifier = Modifier.fillMaxWidth().clickable(onClick = onClick).padding(horizontal = 16.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        IconTile(bill.icon)
+        IconTile(bill.iconKey)
         Spacer(Modifier.width(12.dp))
         Text(bill.name, style = DuetlyType.body, color = c.textPrimary, modifier = Modifier.weight(1f))
         Column(horizontalAlignment = Alignment.End) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 StatusPill(bill)
                 Spacer(Modifier.width(10.dp))
-                val amountColor = if (bill.status == BillStatus.DUE) c.textSecondary else c.textPrimary
-                Text(Money.formatPln(bill.amountCents), style = DuetlyType.amountMd, color = amountColor)
-            }
-            if (bill.status == BillStatus.PAID) {
-                Spacer(Modifier.height(2.dp))
-                Text("Planned ${Money.formatPln(bill.plannedCents)}", style = DuetlyType.small, color = c.textFaint)
+                Text(
+                    Money.formatPln(bill.amountCents),
+                    style = DuetlyType.amountSm,
+                    color = if (bill.paid) c.textPrimary else c.textSecondary,
+                )
             }
         }
     }
@@ -345,123 +384,11 @@ private fun BillRow(bill: Bill) {
 @Composable
 private fun StatusPill(bill: Bill) {
     val c = Duetly.colors
-    val (bg, fg, label) = if (bill.status == BillStatus.PAID) {
-        Triple(c.paidSoft, c.paidText, "Paid")
-    } else {
-        Triple(c.warningSoft, c.warning, bill.dueLabel ?: "Due")
-    }
+    val bg = if (bill.paid) c.successSoft else c.warningSoft
+    val fg = if (bill.paid) c.successInk else c.warningInk
+    val label = if (bill.paid) "Paid" else "Due ${bill.dueDay} Jul"
     Box(
-        modifier = Modifier.clip(RoundedCornerShape(999.dp)).background(bg).padding(horizontal = 10.dp, vertical = 4.dp),
-    ) {
-        Text(label, style = DuetlyType.pill, color = fg)
-    }
-}
-
-/* --------------------------- Bottom nav --------------------------- */
-
-private data class NavItem(val icon: ImageVector, val label: String, val selected: Boolean)
-
-@Composable
-private fun BottomNav(modifier: Modifier = Modifier) {
-    val c = Duetly.colors
-    val items = listOf(
-        NavItem(Icons.Outlined.Home, "Home", true),
-        NavItem(Icons.Outlined.Timeline, "Activity", false),
-        NavItem(Icons.Outlined.Description, "Bills", false),
-        NavItem(Icons.Outlined.PieChart, "Budget", false),
-        NavItem(Icons.Outlined.Settings, "Settings", false),
-    )
-    Column(modifier = modifier.fillMaxWidth().background(c.surface)) {
-        Box(Modifier.fillMaxWidth().height(1.dp).background(c.border))
-        Row(
-            modifier = Modifier.fillMaxWidth().navigationBarsPadding().padding(vertical = 10.dp),
-            horizontalArrangement = Arrangement.SpaceEvenly,
-        ) {
-            items.forEach { item ->
-                val tint = if (item.selected) c.textPrimary else c.textSecondary
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(item.icon, item.label, tint = tint, modifier = Modifier.size(24.dp))
-                    Spacer(Modifier.height(4.dp))
-                    Text(item.label, style = DuetlyType.navLabel, color = tint)
-                }
-            }
-        }
-    }
-}
-
-@Composable
-private fun Fab(modifier: Modifier = Modifier) {
-    val c = Duetly.colors
-    Box(
-        modifier = modifier.size(56.dp).clip(CircleShape).background(c.inkSurface).clickable { },
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(Icons.Filled.Add, "Add", tint = c.onInkSurface, modifier = Modifier.size(26.dp))
-    }
-}
-
-/* ------------------------- Shared pieces -------------------------- */
-
-@Composable
-private fun SectionHeader(title: String, trailing: String? = null) {
-    val c = Duetly.colors
-    Row(
-        modifier = Modifier.fillMaxWidth().padding(horizontal = PagePad),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(title, style = DuetlyType.label, color = c.textSecondary, modifier = Modifier.weight(1f))
-        if (trailing != null) {
-            Text(trailing, style = DuetlyType.bodyStrong, color = c.textPrimary)
-        }
-    }
-}
-
-@Composable
-private fun CardContainer(content: @Composable () -> Unit) {
-    val c = Duetly.colors
-    Column(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = PagePad)
-            .clip(RoundedCornerShape(20.dp))
-            .background(c.surface)
-            .border(1.dp, c.border, RoundedCornerShape(20.dp)),
-    ) { content() }
-}
-
-@Composable
-private fun RowDivider() {
-    val c = Duetly.colors
-    Box(Modifier.fillMaxWidth().padding(start = 52.dp).height(1.dp).background(c.border))
-}
-
-@Composable
-private fun IconTile(icon: ImageVector) {
-    val c = Duetly.colors
-    Box(
-        modifier = Modifier.size(40.dp).clip(RoundedCornerShape(12.dp)).background(c.sunken),
-        contentAlignment = Alignment.Center,
-    ) {
-        Icon(icon, null, tint = c.textPrimary, modifier = Modifier.size(20.dp))
-    }
-}
-
-/** A rounded, gapped, weighted progress bar. Zero-weight segments are dropped. */
-@Composable
-private fun SegmentedBar(segments: List<Pair<Float, Color>>, height: androidx.compose.ui.unit.Dp = 7.dp) {
-    val visible = segments.filter { it.first > 0f }
-    Row(
-        modifier = Modifier.fillMaxWidth().height(height),
-        horizontalArrangement = Arrangement.spacedBy(3.dp),
-    ) {
-        visible.forEach { (weight, color) ->
-            Box(
-                modifier = Modifier
-                    .weight(weight)
-                    .height(height)
-                    .clip(RoundedCornerShape(999.dp))
-                    .background(color),
-            )
-        }
-    }
+        modifier = Modifier.clip(RoundedCornerShape(999.dp)).background(bg)
+            .padding(horizontal = 10.dp, vertical = 4.dp),
+    ) { Text(label, style = DuetlyType.caption, color = fg) }
 }
