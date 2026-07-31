@@ -38,4 +38,25 @@ class MoneyTest {
         val cents = 9999L
         assertEquals(cents, Money.parseToCents(Money.centsToPlainString(cents)))
     }
+
+    // Non-breaking space used by the PLN formatter.
+    private val nb = '\u00A0'
+
+    @Test
+    fun formatsWholeZlotyWithGrouping() {
+        assertEquals("1${nb}240${nb}zł", Money.formatPln(124_000))
+        assertEquals("2${nb}710${nb}zł", Money.formatPln(271_000))
+    }
+
+    @Test
+    fun formatsSmallAmounts() {
+        assertEquals("66${nb}zł", Money.formatPln(6_600))
+        assertEquals("0${nb}zł", Money.formatPln(0))
+    }
+
+    @Test
+    fun showsDecimalsOnlyWhenNonZero() {
+        assertEquals("12,50${nb}zł", Money.formatPln(1_250))
+        assertEquals("12${nb}zł", Money.formatPln(1_200))
+    }
 }
