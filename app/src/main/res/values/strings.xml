@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">Expense Tracker</string>
+    <string name="app_name">Duetly</string>
     <string name="expenses">Expenses</string>
     <string name="add_expense">Add expense</string>
     <string name="edit_expense">Edit expense</string>
