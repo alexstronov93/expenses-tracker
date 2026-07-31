@@ -19,39 +19,42 @@ private fun jakarta(weight: Int) = Font(
     variationSettings = FontVariation.Settings(FontVariation.weight(weight)),
 )
 
-/** Plus Jakarta Sans (variable font), the Duetly type family. */
+/** Plus Jakarta Sans (variable), the single Duetly typeface. */
 val JakartaSans = FontFamily(
-    jakarta(400),
-    jakarta(500),
-    jakarta(600),
-    jakarta(700),
-    jakarta(800),
+    jakarta(400), jakarta(500), jakarta(600), jakarta(700), jakarta(800),
 )
 
+// Tabular figures keep columns of amounts aligned — a 2a ("app-project chrome") trait.
+private const val TNUM = "tnum"
+
 /**
- * Named text styles from the Duetly type scale. Prefer these over the raw
- * Material typography for Duetly screens.
+ * The Duetly type scale. Tight tracking on headlines, near-normal on body,
+ * tracked-up uppercase section labels in Slate.
  */
 object DuetlyType {
-    val h1 = TextStyle(
+    val screenTitle = TextStyle(
         fontFamily = JakartaSans, fontWeight = FontWeight(800),
         fontSize = 30.sp, lineHeight = 34.sp, letterSpacing = (-0.02).em,
     )
-    val h2 = TextStyle(
-        fontFamily = JakartaSans, fontWeight = FontWeight(700),
-        fontSize = 22.sp, lineHeight = 26.sp, letterSpacing = (-0.02).em,
-    )
-    val amountXl = TextStyle(
+    val amountHero = TextStyle(
         fontFamily = JakartaSans, fontWeight = FontWeight(800),
-        fontSize = 40.sp, lineHeight = 44.sp, letterSpacing = (-0.03).em,
+        fontSize = 38.sp, lineHeight = 42.sp, letterSpacing = (-0.03).em,
+        fontFeatureSettings = TNUM,
     )
     val amountLg = TextStyle(
         fontFamily = JakartaSans, fontWeight = FontWeight(700),
-        fontSize = 26.sp, lineHeight = 30.sp, letterSpacing = (-0.02).em,
+        fontSize = 20.sp, lineHeight = 24.sp, letterSpacing = (-0.01).em,
+        fontFeatureSettings = TNUM,
     )
     val amountMd = TextStyle(
         fontFamily = JakartaSans, fontWeight = FontWeight(700),
-        fontSize = 18.sp, lineHeight = 22.sp, letterSpacing = (-0.01).em,
+        fontSize = 16.sp, lineHeight = 20.sp,
+        fontFeatureSettings = TNUM,
+    )
+    val amountSm = TextStyle(
+        fontFamily = JakartaSans, fontWeight = FontWeight(600),
+        fontSize = 14.sp, lineHeight = 18.sp,
+        fontFeatureSettings = TNUM,
     )
     val titleMd = TextStyle(
         fontFamily = JakartaSans, fontWeight = FontWeight(600),
@@ -59,7 +62,7 @@ object DuetlyType {
     )
     val body = TextStyle(
         fontFamily = JakartaSans, fontWeight = FontWeight(500),
-        fontSize = 15.sp, lineHeight = 22.sp,
+        fontSize = 16.sp, lineHeight = 22.sp, letterSpacing = (-0.005).em,
     )
     val bodyStrong = TextStyle(
         fontFamily = JakartaSans, fontWeight = FontWeight(600),
@@ -67,26 +70,31 @@ object DuetlyType {
     )
     val small = TextStyle(
         fontFamily = JakartaSans, fontWeight = FontWeight(500),
-        fontSize = 13.sp, lineHeight = 18.sp,
+        fontSize = 14.sp, lineHeight = 19.sp,
     )
-    /** Uppercase tracked section label. */
-    val label = TextStyle(
-        fontFamily = JakartaSans, fontWeight = FontWeight(600),
-        fontSize = 12.sp, lineHeight = 16.sp, letterSpacing = 0.08.em,
+    val caption = TextStyle(
+        fontFamily = JakartaSans, fontWeight = FontWeight(500),
+        fontSize = 13.sp, lineHeight = 17.sp,
+        fontFeatureSettings = TNUM,
     )
-    val pill = TextStyle(
-        fontFamily = JakartaSans, fontWeight = FontWeight(600),
-        fontSize = 12.sp, lineHeight = 14.sp, letterSpacing = 0.01.em,
+    /** Uppercase, tracked section label — the 2a chrome signature. */
+    val sectionLabel = TextStyle(
+        fontFamily = JakartaSans, fontWeight = FontWeight(700),
+        fontSize = 12.sp, lineHeight = 16.sp, letterSpacing = 0.1.em,
     )
     val navLabel = TextStyle(
         fontFamily = JakartaSans, fontWeight = FontWeight(600),
         fontSize = 11.sp, lineHeight = 13.sp,
     )
+    val chip = TextStyle(
+        fontFamily = JakartaSans, fontWeight = FontWeight(600),
+        fontSize = 13.sp, lineHeight = 16.sp,
+    )
 }
 
-/** Material typography, so stray Material components still render in-family. */
+/** Material typography, so stray Material components stay in-family. */
 val DuetlyTypography = Typography(
     bodyLarge = DuetlyType.body,
     titleMedium = DuetlyType.titleMd,
-    labelSmall = DuetlyType.label,
+    labelSmall = DuetlyType.sectionLabel,
 )
