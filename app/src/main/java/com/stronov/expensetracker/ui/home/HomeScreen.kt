@@ -217,7 +217,6 @@ private fun StatTile(icon: ImageVector, label: String, cents: Long) {
 
 @Composable
 private fun AccountsSection(state: HomeState) {
-    val c = Duetly.colors
     SectionHeader("ACCOUNTS", trailing = "See all")
     Spacer(Modifier.height(12.dp))
     LazyRow(
